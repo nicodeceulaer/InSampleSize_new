@@ -32,67 +32,12 @@ public class MyAccessibilityService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        final int eventType = event.getEventType();
-        String eventText = null;
-
-        switch(eventType) {
-            case AccessibilityEvent.TYPE_VIEW_CLICKED:
-                eventText = "Clicked: ";
-                break;
-            case AccessibilityEvent.TYPE_VIEW_FOCUSED:
-                eventText = "Focused: ";
-                break;
-            case AccessibilityEvent.TYPE_ANNOUNCEMENT:
-                eventText = "Announcement: ";
-                break;
-            case AccessibilityEvent.TYPE_VIEW_SCROLLED:
-                eventText = "View scrolled: ";
-                break;
-            case AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT:
-                eventText = "Type text:";
-                break;
-            case AccessibilityEvent.CONTENT_CHANGE_TYPE_UNDEFINED:
-                eventText = "Type undefined:";
-                break;
-            case AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED:
-                eventText = "Access.Focused:";
-                break;
-            case AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED:
-                eventText = "Window content changed:";
-                break;
-            case AccessibilityEvent.CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION:
-                eventText = "Context change type content description :";
-                break;
-            case AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED:
-                eventText = "Type notification state changed :";
-                break;
-            case AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED:
-                eventText = "Type window state changed :";
-                break;
-            default:
-                eventText = "Event " + eventType + ": ";
-        }
-
         Log.i(TAG, "onAccessiblitiyEvent " + event.toString() );
-
         // get the source node of the event
         AccessibilityNodeInfo nodeInfo = event.getSource();
-        HuntForOemShelfThings( nodeInfo );
 
-        // AccessibilityNodeInfo topNode = getListItemNodeInfo(nodeInfo);
-        // HandleRecyclerViewNode( topNode, "1" );
-
-        // Use the event and node information to determine
-        // what action to take
         if( nodeInfo != null ) {
-            Log.i(TAG, ">>   nodeInfo.className          :  " + nodeInfo.getClassName() );
-            Log.i(TAG, ">>   nodeInfo.text               :  " + nodeInfo.getText() );
-            Log.i(TAG, ">>   nodeInfo.contentDescription :  " + nodeInfo.getContentDescription() );
-
-            if( nodeInfo.getClassName() == "android.support.v7.widget.RecyclerView" ) {
-                Log.i(TAG, "  RecyclerView");
-            }
-
+            HuntForImageViews( nodeInfo );
             nodeInfo.recycle();
         }
     }
@@ -139,20 +84,10 @@ public class MyAccessibilityService extends AccessibilityService {
     }
 
     private AccessibilityNodeInfo getTopNode( AccessibilityNodeInfo current ) {
-        int level = 0;
-
-        // in case we start from null, avoid crashing in the loop
-        if( current == null ) { return null; }
-
         while ( current != null ) {
-            // Log.i(TAG, "going up [" + level + "] " +  current.toString() );
-
             AccessibilityNodeInfo parent = current.getParent();
-            level++;
-
             if (parent == null) {
-                // we reached the top, return last valid node
-                return current;
+                return current; // top reached
             }
 
             // NOTE: Recycle the infos.
@@ -160,7 +95,7 @@ public class MyAccessibilityService extends AccessibilityService {
             current = parent;
             oldCurrent.recycle();
         }
-        return null;
+        return null; // empty tree
     }
 
     private void getNodesByClass( AccessibilityNodeInfo topNode, String className ) {
@@ -168,22 +103,16 @@ public class MyAccessibilityService extends AccessibilityService {
     }
 
     private void getNodesByClass ( AccessibilityNodeInfo topNode, String className, String prefix ) {
-        if( topNode == null ) {
-            return;
-        }
+        if( topNode == null ) { return; }
 
         for( int i = 0; i < topNode.getChildCount(); ++i ) {
             AccessibilityNodeInfo node = topNode.getChild(i);
 
             if( node != null) {
                 String newPrefix = prefix + "." + i;
-
                 if (node.getClassName().equals(className) )  {
-                    // Log.i(TAG, "   [" + newPrefix + "] " + node.toString() );
                     if( node.isVisibleToUser() ) {
                         Log.i(TAG, "[" + newPrefix + "] " + node.getContentDescription() );
-                    } else {
-                        Log.i(TAG, "== IN-visible ImageView found =====");
                     }
                 }
                 getNodesByClass( node, className, newPrefix );
@@ -191,7 +120,7 @@ public class MyAccessibilityService extends AccessibilityService {
         }
     }
 
-    private void HuntForOemShelfThings( AccessibilityNodeInfo node ) {
+    private void HuntForImageViews( AccessibilityNodeInfo node ) {
         // first, we go up to a top node
         AccessibilityNodeInfo topNode = getTopNode( node );
 
